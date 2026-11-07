@@ -218,8 +218,8 @@ def plot_calibration(
         max(t["mean_pred"].max(), t["ci_high"].max()) for t in tables.values()
     )
     ax.plot([0, top], [0, top], color=MUTED, linewidth=1, zorder=1)
-    ax.text(top * 0.97, top * 0.93, "perfect calibration", color=INK_SECONDARY,
-            fontsize=8.5, ha="right", va="top", rotation=0)  # fmt: skip
+    ax.text(top * 0.97, top * 0.03, "diagonal = perfect calibration",
+            color=INK_SECONDARY, fontsize=8.5, ha="right", va="bottom")  # fmt: skip
     for (label, table), colour in zip(
         tables.items(), _series_colours(len(tables)), strict=True
     ):
