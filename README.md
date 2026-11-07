@@ -6,7 +6,7 @@ Predicting which diabetic inpatients will be readmitted within 30 days, so a car
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![Licence](https://img.shields.io/badge/licence-MIT-green)
 
-**Status:** In development. Steps 1–2 of 7 (data acquisition, cleaning) complete. Results will be added once the model is evaluated, and none are claimed yet.
+**Status:** In development. Steps 1–3 of 7 (data acquisition, cleaning, exploratory analysis) complete. Results will be added once the model is evaluated, and none are claimed yet.
 
 ## At a glance
 | | |
@@ -56,7 +56,26 @@ flowchart LR
 - **Models:** dummy baseline → logistic regression → random forest → XGBoost, with hyperparameter tuning in grouped cross-validation. The test set is used once.
 - **Metrics:** PR-AUC (primary, because positives are rare), ROC-AUC, Brier score, calibration curve, and precision/recall at capacity thresholds.
 
-_Sections on exploratory analysis, results, explainability, fairness, business interpretation and limitations will be added as each step is completed._
+- **Hold-out:** a patient-disjoint, target-stratified 20% test set (19,867 encounters, 13,951 patients) was split off **before exploration**. EDA and all model development use the training set only.
+
+## 6. Exploratory analysis
+Full narrative: [notebooks/01_eda.ipynb](notebooks/01_eda.ipynb) (training data only).
+
+![Readmission risk by prior inpatient stays](reports/figures/eda_prior_inpatient.png)
+
+- **Prior utilisation is the strongest signal.** The 30-day readmission rate rises from 8.6% for patients with no inpatient stay in the previous year to about 37% for those with five or more (Cramér's V ≈ 0.17).
+- **Discharge destination matters.** Patients sent to rehab or other inpatient care are readmitted at roughly 2–3× the rate of those discharged home.
+- **HbA1c testing** is linked to slightly lower readmission (about 10% vs 11.7%). The difference is statistically significant but small (V ≈ 0.02), and it is an association, not evidence of cause.
+- **Sex shows no association** (p ≈ 0.47). Race shows only small differences. The fairness audit will check model error rates by group, not just base rates.
+- **Every single-variable association is weak**, so expect modest predictive performance.
+
+**A leakage trap found and avoided:**
+
+![Leakage trap](reports/figures/eda_leakage_trap.png)
+
+Counting how many times a patient appears in the dataset looks like a powerful predictor (4% vs 28%). It is leakage: a readmission *is* another encounter in the data, so the count partly contains the answer and uses events after discharge. Features use only the pre-encounter counts the data provides, and every split is grouped by patient.
+
+_Sections on results, explainability, fairness, business interpretation and limitations will be added as each step is completed._
 
 ## Run it yourself
 ```bash
@@ -65,6 +84,8 @@ cd readmission-risk-model
 uv sync                                            # Python 3.12 + dependencies
 uv run python -m readmission_risk.data.download    # fetch + verify the dataset
 uv run python -m readmission_risk.data.clean       # exclusions, target, types -> data/processed
+uv run python -m readmission_risk.data.split       # patient-disjoint train/test
+make eda                                           # re-run the EDA notebook + figures
 make check                                         # lint + tests
 ```
 
@@ -82,7 +103,7 @@ make check                                         # lint + tests
 ## Progress
 - [x] 1. Data acquisition with checksum verification
 - [x] 2. Cleaning and exclusions
-- [ ] 3. Exploratory analysis
+- [x] 3. Exploratory analysis
 - [ ] 4. Feature engineering
 - [ ] 5. Modelling and grouped cross-validation
 - [ ] 6. Evaluation, calibration, SHAP and fairness

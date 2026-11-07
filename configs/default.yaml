@@ -15,3 +15,7 @@ dataset:
   members:
     - diabetic_data.csv
     - IDS_mapping.csv
+
+split:
+  # Patient-disjoint, target-stratified hold-out. Untouched until final evaluation.
+  test_size: 0.2
