@@ -19,7 +19,7 @@ _Written for a non-technical stakeholder: what we found, how confident we are, a
 ## Recommendations
 1. **Use the score to put patients in order for follow-up, not to rule anyone out.** About 6 in 10 readmissions are not on the top-20% list, so clinical judgement and referrals must continue alongside it.
 2. **Watch the oldest patients.** Track how many of their readmissions the list catches. If the gap persists, add a separate check for patients aged 80+.
-3. **Check whether the insurance-type field is needed.** It is the fourth most important input and may reflect income rather than health. Test the model without it and drop it if accuracy holds.
+3. **Remove the insurance-type field in the live version.** It may reflect income rather than health. We tested the model without it: accuracy barely changes, and no group is affected, so the production version will leave it out.
 4. **Validate locally before any real use.** These results come from US hospitals in 1999–2008. Any UK use would need testing on local data, information-governance approval and a data protection impact assessment.
 
 ## Caveats and limitations
