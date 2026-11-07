@@ -296,6 +296,133 @@ def plot_gains(
     return ax
 
 
+def plot_importance(
+    table: pd.DataFrame, title: str, ax: plt.Axes | None = None
+) -> plt.Axes:
+    """Horizontal bars of mean absolute SHAP value, largest at the top.
+
+    Args:
+        table: Output of :func:`readmission_risk.models.explain.importance`.
+        title: Chart title.
+        ax: Axes to draw on; a new figure is created if omitted.
+
+    Returns:
+        The axes.
+    """
+    if ax is None:
+        _, ax = plt.subplots(figsize=(7.5, 0.4 * len(table) + 1.3))
+    pos = range(len(table))
+    values = table["mean_abs_shap"].to_numpy()
+    ax.barh(pos, values, 0.62, color=SERIES, edgecolor=SURFACE, linewidth=2)
+    for i, (v, share) in enumerate(zip(values, table["share"], strict=True)):
+        ax.text(v + values.max() * 0.01, i, f"{share:.0%}", va="center",
+                fontsize=8.5, color=INK_SECONDARY)  # fmt: skip
+    ax.set_yticks(list(pos), table["label"])
+    ax.invert_yaxis()
+    ax.set_xlim(0, values.max() * 1.12)
+    ax.grid(axis="y", visible=False)
+    ax.set_xlabel("Mean |SHAP value| (log-odds); label = share of total")
+    ax.set_title(title)
+    return ax
+
+
+def plot_dependence(
+    table: pd.DataFrame, title: str, xlabel: str, ax: plt.Axes | None = None
+) -> plt.Axes:
+    """Median SHAP value per level with interquartile whiskers.
+
+    Args:
+        table: Output of :func:`readmission_risk.models.explain.dependence_table`.
+        title: Chart title.
+        xlabel: Label for the levels.
+        ax: Axes to draw on; a new figure is created if omitted.
+
+    Returns:
+        The axes.
+    """
+    if ax is None:
+        _, ax = plt.subplots(figsize=(7.5, 4.2))
+    pos = np.arange(len(table))
+    ax.axhline(0, color=MUTED, linewidth=1, zorder=1)
+    ax.vlines(pos, table["q1"], table["q3"], color=SERIES, linewidth=2, alpha=0.5,
+              zorder=2)  # fmt: skip
+    ax.plot(pos, table["median"], "o", color=SERIES, markersize=8,
+            markeredgecolor=SURFACE, markeredgewidth=1.5, zorder=3)  # fmt: skip
+    ax.set_xticks(
+        pos,
+        [f"{lv}\nn={n:,}" for lv, n in zip(table["level"], table["n"], strict=True)],
+    )
+    ax.grid(axis="x", visible=False)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("SHAP value (log-odds of readmission)")
+    ax.text(1.0, 0, " no effect", transform=ax.get_yaxis_transform(),
+            color=INK_SECONDARY, fontsize=8.5, va="center", ha="left")  # fmt: skip
+    ax.set_title(title)
+    return ax
+
+
+def plot_group_metric(
+    table: pd.DataFrame,
+    attribute_labels: dict[str, str],
+    overall: float,
+    title: str,
+    xlabel: str,
+    orders: dict[str, list[str]] | None = None,
+) -> plt.Figure:
+    """One panel per attribute: a metric per group with 95% CI whiskers.
+
+    Groups flagged ``small_group`` get an asterisk and a footnote.
+
+    Args:
+        table: Rows of one metric from
+            :func:`readmission_risk.models.fairness.fairness_table`.
+        attribute_labels: Attribute column -> panel heading.
+        overall: Metric for the whole population, drawn as a reference line.
+        title: Figure title.
+        xlabel: Label for the metric axis.
+        orders: Optional fixed group order per attribute (e.g. age bands);
+            other attributes are sorted largest group first.
+
+    Returns:
+        The figure.
+    """
+    attributes = list(attribute_labels)
+    sizes = [int((table["attribute"] == a).sum()) for a in attributes]
+    fig, axes = plt.subplots(
+        len(attributes), 1, figsize=(7.5, 0.42 * sum(sizes) + 1.0 * len(attributes)),
+        sharex=True, gridspec_kw={"height_ratios": sizes},
+    )  # fmt: skip
+    for ax, attribute in zip(axes, attributes, strict=True):
+        part = table[table["attribute"] == attribute].sort_values("n", ascending=False)
+        if orders and attribute in orders:
+            rank = {g: i for i, g in enumerate(orders[attribute])}
+            part = part.sort_values("group", key=lambda s: s.map(rank))
+        labels = [
+            f"{g} *" if small else str(g)
+            for g, small in zip(part["group"], part["small_group"], strict=True)
+        ]
+        rates = part.set_index(pd.Index(labels))[["estimate", "ci_low", "ci_high"]]
+        plot_rates(
+            rates.rename(columns={"estimate": "rate"}),
+            title=attribute_labels[attribute],
+            overall=overall,
+            horizontal=True,
+            ax=ax,
+        )
+        ax.set_xlabel("")
+        ax.title.set_fontsize(10.5)
+    axes[-1].set_xlabel(xlabel)
+    for ax in axes[1:]:
+        for text in ax.texts:  # overall label once, on the top panel
+            text.set_visible(False)
+    fig.suptitle(title, x=0.01, ha="left", fontweight="bold", fontsize=12)
+    fig.text(0.01, -0.01, "* fewer than 50 readmissions in the test set: too small "
+             "to draw conclusions. Whiskers: 95% patient-bootstrap interval.",
+             fontsize=8, color=INK_SECONDARY, ha="left", va="top")  # fmt: skip
+    fig.tight_layout()
+    return fig
+
+
 def save(fig: plt.Figure, path: Path) -> Path:
     """Save a figure as PNG, creating the folder if needed."""
     path.parent.mkdir(parents=True, exist_ok=True)
