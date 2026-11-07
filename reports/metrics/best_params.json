@@ -1,0 +1,16 @@
+{
+  "random_forest": {
+    "model__max_depth": 12,
+    "model__max_features": 0.3,
+    "model__min_samples_leaf": 10
+  },
+  "xgboost": {
+    "model__colsample_bytree": 0.9162213204002109,
+    "model__learning_rate": 0.018891200276189388,
+    "model__max_depth": 5,
+    "model__min_child_weight": 2.0492680115417348,
+    "model__n_estimators": 659,
+    "model__reg_lambda": 1.672269700618368,
+    "model__subsample": 0.6028265220878869
+  }
+}
