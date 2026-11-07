@@ -5,6 +5,7 @@ paths:
   raw: data/raw
   processed: data/processed
   figures: reports/figures
+  metrics: reports/metrics
 
 dataset:
   name: Diabetes 130-US Hospitals for Years 1999-2008
@@ -19,3 +20,11 @@ dataset:
 split:
   # Patient-disjoint, target-stratified hold-out. Untouched until final evaluation.
   test_size: 0.2
+
+cv:
+  # Patient-grouped, outcome-stratified folds on the training set only.
+  n_splits: 5
+
+evaluation:
+  # Share of discharges the care team can review (README objective 3).
+  capacities: [0.1, 0.2]

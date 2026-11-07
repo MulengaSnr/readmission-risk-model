@@ -16,7 +16,7 @@ test:    ## Run the test suite with coverage
 
 check: lint test  ## Everything CI runs
 
-.PHONY: data eda
+.PHONY: data eda baselines
 data:    ## Download, clean and split the dataset
 	uv run python -m readmission_risk.data.download
 	uv run python -m readmission_risk.data.clean
@@ -25,3 +25,6 @@ data:    ## Download, clean and split the dataset
 eda:     ## Regenerate the EDA notebook (from its paired .py) and figures
 	uv run jupytext --to ipynb notebooks/01_eda.py
 	uv run jupyter nbconvert --to notebook --execute --inplace notebooks/01_eda.ipynb
+
+baselines: ## Grouped cross-validation of the baseline models (training set only)
+	uv run python -m readmission_risk.models.baselines
