@@ -70,7 +70,7 @@ Policy: flag the top 20% with one cut-off for everyone. Recall is the share of e
 - **No real or personal data was used.** The data is public, de-identified and CC BY 4.0.
 - **Health data is special-category data** under UK GDPR Article 9. Any real deployment would need a lawful basis and an Article 9 condition (for example, 9(2)(h), provision of health care), a data protection impact assessment, and local information-governance approval. This is a summary, not legal advice.
 - **Human in the loop:** the design keeps a person in the loop. The score prioritises outreach and does not make decisions about individuals by itself, which is relevant to Article 22 on solely automated decision-making. Patients would still need to be told how their data is used.
-- **Payer may be a proxy:** insurance type is the fourth most important feature and may stand in for income or social disadvantage. A sensitivity analysis without it is planned (see Monitoring and next steps).
+- **Payer may be a proxy:** insurance type is the fourth most important feature and may stand in for income or social disadvantage. A sensitivity analysis in cross-validation (training set only) found that dropping it costs 0.0037 PR-AUC and changes no group's recall by more than about 1 point. Under the pre-set rule, payer is dropped from the production version. This v1.0 model, as evaluated, still includes it.
 - **Risk of reinforcing access patterns:** the model learns from past utilisation, so patients who historically used fewer services, possibly because of access barriers, may be under-flagged.
 
 ## Limitations and risks

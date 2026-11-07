@@ -121,18 +121,36 @@ def add_features(
     return out
 
 
-def feature_columns(include_race: bool = False) -> list[str]:
+def _keep(columns: list[str], exclude: tuple[str, ...]) -> list[str]:
+    return [c for c in columns if c not in exclude]
+
+
+def _check_exclude(exclude: tuple[str, ...]) -> None:
+    known = set(COUNT_FEATURES + NUMERIC_FEATURES + CATEGORICAL_FEATURES)
+    unknown = set(exclude) - known - set(SENSITIVE_FEATURES)
+    if unknown:
+        raise ValueError(f"Cannot exclude unknown features: {sorted(unknown)}")
+
+
+def feature_columns(
+    include_race: bool = False, exclude: tuple[str, ...] = ()
+) -> list[str]:
     """Names of the model input columns.
 
     Args:
         include_race: Whether ``race`` is used as a model input. It is always
             retained in the data for fairness auditing either way.
+        exclude: Features to leave out (for sensitivity analyses).
 
     Returns:
         Ordered list of input column names.
+
+    Raises:
+        ValueError: If ``exclude`` names an unknown feature.
     """
+    _check_exclude(exclude)
     cats = CATEGORICAL_FEATURES + (SENSITIVE_FEATURES if include_race else [])
-    return COUNT_FEATURES + NUMERIC_FEATURES + cats
+    return _keep(COUNT_FEATURES + NUMERIC_FEATURES + cats, exclude)
 
 
 def _as_object(x: pd.DataFrame) -> pd.DataFrame:
@@ -140,7 +158,9 @@ def _as_object(x: pd.DataFrame) -> pd.DataFrame:
     return x.astype("object").where(x.notna(), np.nan)
 
 
-def build_preprocessor(include_race: bool = False) -> ColumnTransformer:
+def build_preprocessor(
+    include_race: bool = False, exclude: tuple[str, ...] = ()
+) -> ColumnTransformer:
     """Create the (unfitted) preprocessing step for the model pipeline.
 
     - Counts: median-impute, ``log1p``, standardise.
@@ -153,10 +173,14 @@ def build_preprocessor(include_race: bool = False) -> ColumnTransformer:
 
     Args:
         include_race: Whether ``race`` is one of the inputs.
+        exclude: Features to leave out (for sensitivity analyses).
 
     Returns:
         A ``ColumnTransformer`` producing a dense float matrix with readable
         feature names (``get_feature_names_out``).
+
+    Raises:
+        ValueError: If ``exclude`` names an unknown feature.
     """
     counts = Pipeline(
         [
@@ -185,12 +209,13 @@ def build_preprocessor(include_race: bool = False) -> ColumnTransformer:
             ),
         ]
     )
+    _check_exclude(exclude)
     cats = CATEGORICAL_FEATURES + (SENSITIVE_FEATURES if include_race else [])
     return ColumnTransformer(
         [
-            ("counts", counts, COUNT_FEATURES),
-            ("numeric", numeric, NUMERIC_FEATURES),
-            ("categorical", categorical, cats),
+            ("counts", counts, _keep(COUNT_FEATURES, exclude)),
+            ("numeric", numeric, _keep(NUMERIC_FEATURES, exclude)),
+            ("categorical", categorical, _keep(cats, exclude)),
         ],
         remainder="drop",
         verbose_feature_names_out=False,
