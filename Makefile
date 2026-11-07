@@ -16,7 +16,7 @@ test:    ## Run the test suite with coverage
 
 check: lint test  ## Everything CI runs
 
-.PHONY: data eda baselines models evaluate
+.PHONY: data eda baselines models evaluate explain fairness
 data:    ## Download, clean and split the dataset
 	uv run python -m readmission_risk.data.download
 	uv run python -m readmission_risk.data.clean
@@ -36,3 +36,9 @@ models:  ## Tune random forest + XGBoost (one process each), then compare (~45 m
 
 evaluate: ## One-time test-set evaluation of the final models (refuses to overwrite)
 	uv run python -m readmission_risk.models.evaluate
+
+explain: ## SHAP importance and dependence for the final model (test set)
+	uv run python -m readmission_risk.models.explain
+
+fairness: ## Fairness audit by sex, age band and race (test set)
+	uv run python -m readmission_risk.models.fairness
