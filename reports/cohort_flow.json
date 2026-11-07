@@ -1,0 +1,19 @@
+{
+  "steps": [
+    {
+      "step": "Raw encounters",
+      "removed": 0,
+      "remaining": 101766
+    },
+    {
+      "step": "Exclude death / hospice discharges",
+      "removed": 2423,
+      "remaining": 99343
+    },
+    {
+      "step": "Exclude invalid sex",
+      "removed": 3,
+      "remaining": 99340
+    }
+  ]
+}
