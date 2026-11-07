@@ -16,7 +16,7 @@ test:    ## Run the test suite with coverage
 
 check: lint test  ## Everything CI runs
 
-.PHONY: data eda baselines models evaluate explain fairness
+.PHONY: data eda baselines models evaluate explain fairness sensitivity
 data:    ## Download, clean and split the dataset
 	uv run python -m readmission_risk.data.download
 	uv run python -m readmission_risk.data.clean
@@ -42,3 +42,6 @@ explain: ## SHAP importance and dependence for the final model (test set)
 
 fairness: ## Fairness audit by sex, age band and race (test set)
 	uv run python -m readmission_risk.models.fairness
+
+sensitivity: ## CV with and without payer_code (training set only)
+	uv run python -m readmission_risk.models.sensitivity
