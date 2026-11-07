@@ -13,6 +13,7 @@ from pathlib import Path
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from matplotlib.ticker import PercentFormatter
 
@@ -23,6 +24,9 @@ MUTED = "#898781"
 GRID = "#e1e0d9"
 AXIS = "#c3c2b7"
 SERIES = "#2a78d6"  # single-series colour (categorical slot 1)
+# Categorical order for multi-series charts (fixed, never cycled). Slots 1-2
+# pass the palette validator's CVD and contrast checks on SURFACE.
+SERIES_ORDER = ("#2a78d6", "#eb6834")
 
 
 def apply_style() -> None:
@@ -184,6 +188,110 @@ def plot_missingness(
     ax.xaxis.set_major_formatter(PercentFormatter(1, decimals=0))
     ax.grid(axis="y", visible=False)
     ax.set_xlabel("Share of training encounters missing")
+    ax.set_title(title)
+    return ax
+
+
+def _series_colours(n: int) -> tuple[str, ...]:
+    if n > len(SERIES_ORDER):
+        raise ValueError(f"At most {len(SERIES_ORDER)} series, got {n}")
+    return SERIES_ORDER[:n]
+
+
+def plot_calibration(
+    tables: dict[str, pd.DataFrame], title: str, ax: plt.Axes | None = None
+) -> plt.Axes:
+    """Observed vs predicted readmission rate per risk decile, one line per model.
+
+    Args:
+        tables: Model label -> output of
+            :func:`readmission_risk.models.evaluate.calibration_table`.
+        title: Chart title.
+        ax: Axes to draw on; a new figure is created if omitted.
+
+    Returns:
+        The axes.
+    """
+    if ax is None:
+        _, ax = plt.subplots(figsize=(6.4, 5.4))
+    top = 1.1 * max(
+        max(t["mean_pred"].max(), t["ci_high"].max()) for t in tables.values()
+    )
+    ax.plot([0, top], [0, top], color=MUTED, linewidth=1, zorder=1)
+    ax.text(top * 0.97, top * 0.03, "diagonal = perfect calibration",
+            color=INK_SECONDARY, fontsize=8.5, ha="right", va="bottom")  # fmt: skip
+    for (label, table), colour in zip(
+        tables.items(), _series_colours(len(tables)), strict=True
+    ):
+        err = [
+            table["observed"] - table["ci_low"],
+            table["ci_high"] - table["observed"],
+        ]
+        ax.errorbar(table["mean_pred"], table["observed"], yerr=err, fmt="none",
+                    ecolor=colour, elinewidth=1, alpha=0.6, zorder=2)  # fmt: skip
+        ax.plot(table["mean_pred"], table["observed"], color=colour, linewidth=2,
+                marker="o", markersize=6, markeredgecolor=SURFACE,
+                markeredgewidth=1.5, label=label, zorder=3)  # fmt: skip
+    ax.set_xlim(0, top)
+    ax.set_ylim(0, top)
+    ax.set_aspect("equal")
+    ax.xaxis.set_major_formatter(PercentFormatter(1, decimals=0))
+    ax.yaxis.set_major_formatter(PercentFormatter(1, decimals=0))
+    ax.set_xlabel("Mean predicted risk (decile of patients)")
+    ax.set_ylabel("Observed 30-day readmission rate")
+    ax.legend(frameon=False, loc="upper left", labelcolor=INK_SECONDARY)
+    ax.set_title(title)
+    return ax
+
+
+def plot_gains(
+    curves: dict[str, pd.DataFrame],
+    capacities: tuple[float, ...] | list[float],
+    title: str,
+    ax: plt.Axes | None = None,
+) -> plt.Axes:
+    """Cumulative share of readmissions reached as more patients are reviewed.
+
+    The first model's value is labelled at each capacity.
+
+    Args:
+        curves: Model label -> output of
+            :func:`readmission_risk.models.evaluate.gains_curve`.
+        capacities: Review capacities to mark, as shares of patients.
+        title: Chart title.
+        ax: Axes to draw on; a new figure is created if omitted.
+
+    Returns:
+        The axes.
+    """
+    if ax is None:
+        _, ax = plt.subplots(figsize=(7.5, 4.6))
+    ax.plot([0, 1], [0, 1], color=MUTED, linewidth=1, zorder=1)
+    ax.text(0.62, 0.55, "random order", color=INK_SECONDARY, fontsize=8.5,
+            rotation=0, ha="left", va="top")  # fmt: skip
+    for (label, curve), colour in zip(
+        curves.items(), _series_colours(len(curves)), strict=True
+    ):
+        ax.plot(curve["share_reviewed"], curve["share_reached"], color=colour,
+                linewidth=2, label=label, zorder=3)  # fmt: skip
+    first = next(iter(curves.values()))
+    for capacity in capacities:
+        reached = float(
+            np.interp(capacity, first["share_reviewed"], first["share_reached"])
+        )
+        ax.axvline(capacity, color=GRID, linewidth=1, zorder=0)
+        ax.plot(capacity, reached, "o", color=SERIES_ORDER[0], markersize=7,
+                markeredgecolor=SURFACE, markeredgewidth=1.5, zorder=4)  # fmt: skip
+        ax.annotate(f"top {capacity:.0%} → {reached:.0%}", (capacity, reached),
+                    xytext=(8, -4), textcoords="offset points", ha="left",
+                    va="top", fontsize=8.5, color=INK)  # fmt: skip
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1.02)
+    ax.xaxis.set_major_formatter(PercentFormatter(1, decimals=0))
+    ax.yaxis.set_major_formatter(PercentFormatter(1, decimals=0))
+    ax.set_xlabel("Share of discharges reviewed, highest predicted risk first")
+    ax.set_ylabel("Share of readmissions reached")
+    ax.legend(frameon=False, loc="lower right", labelcolor=INK_SECONDARY)
     ax.set_title(title)
     return ax
 
