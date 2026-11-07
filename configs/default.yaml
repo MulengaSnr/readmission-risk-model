@@ -1,6 +1,17 @@
 # Central configuration: paths, random seed and parameters live here, not in code.
 seed: 42
+
 paths:
   raw: data/raw
   processed: data/processed
   figures: reports/figures
+
+dataset:
+  name: Diabetes 130-US Hospitals for Years 1999-2008
+  url: https://archive.ics.uci.edu/static/public/296/diabetes+130-us+hospitals+for+years+1999-2008.zip
+  # SHA-256 of the zip as retrieved on 2026-11-07. A mismatch means the source changed.
+  sha256: f82ac129da2ddd2299391ff6fbae3a6a58b3edcf59ac9d7bd480c00fe453112a
+  archive_name: diabetes_130_us_hospitals.zip
+  members:
+    - diabetic_data.csv
+    - IDS_mapping.csv
