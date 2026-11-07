@@ -6,7 +6,7 @@ Predicting which diabetic inpatients will be readmitted within 30 days, so a car
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![Licence](https://img.shields.io/badge/licence-MIT-green)
 
-**Status:** In development. Steps 1–4 of 7 complete, and step 5 is under way: baselines have been cross-validated on the training set. The held-out test set has not been used, so no final result is claimed yet.
+**Status:** In development. Steps 1–5 of 7 complete: baselines and tuned tree models have been cross-validated on the training set. The held-out test set has not been used, so no final result is claimed yet.
 
 ## At a glance
 | | |
@@ -88,6 +88,26 @@ Five patient-grouped, outcome-stratified folds on the 79,473 training encounters
 - **The full model adds a modest amount over the one-variable rule.** That matches the EDA (every association is weak), and it sets the bar random forest and XGBoost must clear to justify their extra complexity.
 - **The Brier scores are close together** because the outcome is rare, so the Brier score mostly reflects the base rate. Calibration will be checked with reliability curves in step 6.
 
+## 8. Tree models (cross-validation, training set only)
+Random forest (15 settings) and XGBoost (25 settings) were tuned by random search for PR-AUC on the same five folds, with no class weighting so the probabilities stay calibratable. Search results are in `reports/metrics/tuning_*.csv` and the chosen settings in `best_params.json`. The comparison below is produced by `make models` into `reports/metrics/model_cv.csv`.
+
+| Model | PR-AUC ↑ | ROC-AUC ↑ | Brier ↓ | Readmissions reached, top 10% | Readmissions reached, top 20% |
+|---|---:|---:|---:|---:|---:|
+| Logistic regression | 0.207 ± 0.012 | 0.663 ± 0.007 | 0.097 | 22.7% ± 1.0 | 37.7% ± 1.2 |
+| Random forest | 0.228 ± 0.015 | 0.672 ± 0.008 | 0.096 | 23.6% ± 1.7 | 38.9% ± 1.3 |
+| XGBoost | **0.234 ± 0.015** | **0.677 ± 0.008** | **0.096** | **24.8% ± 1.4** | **39.6% ± 1.7** |
+
+**Paired comparison with logistic regression (PR-AUC, same folds):**
+
+| Model | Mean gain | SD of gain | Folds better |
+|---|---:|---:|---:|
+| XGBoost | +0.026 | 0.003 | 5 of 5 |
+| Random forest | +0.021 | 0.005 | 5 of 5 |
+
+- **XGBoost is the strongest model, and its gain is consistent.** The spread between folds (±0.015) is larger than the gain, but that spread affects every model in the same way. Fold by fold, XGBoost wins every time, by between about 0.02 and 0.03.
+- **In capacity terms, the gain is modest.** Reviewing the top 20% of discharges would reach about 40% of readmissions with XGBoost, against 38% with logistic regression. Whether that justifies a less transparent model is a decision for step 6, after calibration, SHAP and the fairness audit.
+- **These scores are slightly optimistic.** They belong to the best of many settings, chosen on these same folds. The untouched test set will give the unbiased estimate.
+
 _Sections on final results, explainability, fairness, business interpretation and limitations will be added as each step is completed._
 
 ## Run it yourself
@@ -100,6 +120,7 @@ uv run python -m readmission_risk.data.clean       # exclusions, target, types -
 uv run python -m readmission_risk.data.split       # patient-disjoint train/test
 make eda                                           # re-run the EDA notebook + figures
 make baselines                                     # grouped CV of the baseline models
+make models                                        # tune RF + XGBoost and compare (~45 min)
 make check                                         # lint + tests
 ```
 
@@ -119,7 +140,7 @@ make check                                         # lint + tests
 - [x] 2. Cleaning and exclusions
 - [x] 3. Exploratory analysis
 - [x] 4. Feature engineering
-- [ ] 5. Modelling and grouped cross-validation (baselines done; random forest and XGBoost next)
+- [x] 5. Modelling and grouped cross-validation
 - [ ] 6. Evaluation, calibration, SHAP and fairness
 - [ ] 7. Documentation and review
 

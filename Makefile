@@ -16,7 +16,7 @@ test:    ## Run the test suite with coverage
 
 check: lint test  ## Everything CI runs
 
-.PHONY: data eda baselines
+.PHONY: data eda baselines models
 data:    ## Download, clean and split the dataset
 	uv run python -m readmission_risk.data.download
 	uv run python -m readmission_risk.data.clean
@@ -28,3 +28,8 @@ eda:     ## Regenerate the EDA notebook (from its paired .py) and figures
 
 baselines: ## Grouped cross-validation of the baseline models (training set only)
 	uv run python -m readmission_risk.models.baselines
+
+models:  ## Tune random forest + XGBoost (one process each), then compare (~45 min)
+	uv run python -m readmission_risk.models.tuning --tune random_forest
+	uv run python -m readmission_risk.models.tuning --tune xgboost
+	uv run python -m readmission_risk.models.tuning --compare

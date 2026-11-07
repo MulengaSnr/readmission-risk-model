@@ -28,3 +28,10 @@ cv:
 evaluation:
   # Share of discharges the care team can review (README objective 3).
   capacities: [0.1, 0.2]
+
+tuning:
+  # Random-search budget per model (settings tried, each on every CV fold).
+  # Sized from single-fit timings: RF ~13 s, XGBoost ~4 s per fit on 4 cores.
+  n_iter:
+    random_forest: 15
+    xgboost: 25
