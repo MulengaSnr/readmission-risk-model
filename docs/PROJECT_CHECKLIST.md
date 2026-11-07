@@ -2,14 +2,14 @@
 
 Copy into each new repo and tick off as work progresses.
 
-_Status for this repo, 2026-11-07: open items are GitHub Issues (work was tracked through one PR per step instead), repo topics, and linking from the profile, which waits until the repo is public._
+_Status for this repo, 2026-11-07: all items complete. Work was tracked as one PR per step (#1–#12). Follow-on work is in Issues #13–#15. The repo is public, with topics, and is linked from the profile README and landing page._
 
 ## Plan
 - [x] Business problem and decision-maker written down
 - [x] Technical objectives and success metric (with baseline) defined
 - [x] Dataset chosen; licence checked and recorded in `data/README.md`
 - [x] Architecture sketched in README
-- [ ] Issues created for each major task
+- [x] Issues created for each major task
 
 ## Build
 - [x] Reproducible data download / generation script
@@ -31,5 +31,5 @@ _Status for this repo, 2026-11-07: open items are GitHub Issues (work was tracke
 
 ## Publish (only after approval)
 - [x] No secrets (`git log -p | grep -i key` reviewed), no real personal data
-- [ ] Repo description + topics set
-- [ ] Linked from profile README and landing page
+- [x] Repo description + topics set
+- [x] Linked from profile README and landing page
