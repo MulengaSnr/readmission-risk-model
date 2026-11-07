@@ -5,6 +5,7 @@ Skipped automatically until ``icd9_chapter`` is implemented.
 
 import math
 
+import pandas as pd
 import pytest
 
 from readmission_risk.features.icd9 import CATEGORIES, icd9_chapter
@@ -79,12 +80,14 @@ def test_maps_code_to_category(code, expected):
     assert icd9_chapter(code) == expected
 
 
-@pytest.mark.parametrize("missing", [None, math.nan, float("nan"), "", "   "])
+@pytest.mark.parametrize("missing", [None, math.nan, float("nan"), pd.NA, "", "   "])
 def test_missing_values(missing):
     assert icd9_chapter(missing) == "Missing"
 
 
-@pytest.mark.parametrize("bad", ["abc", "4x8", "--", "250..1"])
+@pytest.mark.parametrize(
+    "bad", ["abc", "4x8", "--", "250..1", "nan", "inf", "1e2", "-5", "1000", "428.123"]
+)
 def test_garbage_raises(bad):
     with pytest.raises(ValueError):
         icd9_chapter(bad)
@@ -93,3 +96,9 @@ def test_garbage_raises(bad):
 def test_always_returns_a_known_category():
     for code in ["1", "100", "250", "300", "450", "500", "600", "700", "900", "V1"]:
         assert icd9_chapter(code) in CATEGORIES
+
+
+def test_numeric_input_is_accepted():
+    # Codes can arrive as floats if a column is read without a string dtype.
+    assert icd9_chapter(428.0) == "Circulatory"
+    assert icd9_chapter(250.83) == "Diabetes"
