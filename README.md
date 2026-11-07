@@ -215,9 +215,9 @@ Payer can stand in for income, so the tuned XGBoost was refitted without `payer_
 - **A single random seed and one hold-out:** the patient bootstrap captures sampling uncertainty in the test set, but not variation from re-splitting or re-tuning.
 
 ## 14. Next steps
-1. **Production version (follow-on project):** use the model without payer, and serve it behind a FastAPI endpoint with MLflow tracking, CI/CD, and drift and fairness monitoring as specified in the [model card](docs/MODEL_CARD.md#monitoring-if-deployed).
-2. **Decision analysis:** compare intervention costs against avoided readmissions across capacities (net benefit / decision curves) to choose the operating point with the care team.
-3. **Targeting benefit:** with intervention data, estimate who benefits most (uplift modelling) rather than who is at highest risk.
+1. **Production version (follow-on project, [#13](https://github.com/MulengaSnr/readmission-risk-model/issues/13)):** use the model without payer, and serve it behind a FastAPI endpoint with MLflow tracking, CI/CD, and drift and fairness monitoring as specified in the [model card](docs/MODEL_CARD.md#monitoring-if-deployed).
+2. **Decision analysis ([#14](https://github.com/MulengaSnr/readmission-risk-model/issues/14)):** compare intervention costs against avoided readmissions across capacities (net benefit / decision curves) to choose the operating point with the care team.
+3. **Targeting benefit ([#15](https://github.com/MulengaSnr/readmission-risk-model/issues/15)):** with intervention data, estimate who benefits most (uplift modelling) rather than who is at highest risk.
 
 ## Run it yourself
 ```bash
