@@ -1,5 +1,9 @@
 # Notebooks
 
-Notebooks tell the story; reusable logic lives in `src/` and is tested.
+Notebooks tell the story; reusable logic lives in `src/readmission_risk/` and is unit-tested.
 
-Convention: `NN_short_name.ipynb` (e.g. `01_data_collection`, `02_data_cleaning`, `03_eda`, `04_model_development`). Each notebook should run top-to-bottom from a fresh kernel. Clear large outputs before committing.
+| Notebook | Purpose |
+|---|---|
+| [01_eda.ipynb](01_eda.ipynb) | Exploratory analysis on the **training set only**: missing data, drivers of readmission, a leakage trap, fairness preview, implications for features |
+
+Each notebook is paired with a `.py` file (jupytext percent format). Edit the `.py` for readable diffs in pull requests, then regenerate with `make eda`. Every notebook runs top to bottom from a fresh kernel.
