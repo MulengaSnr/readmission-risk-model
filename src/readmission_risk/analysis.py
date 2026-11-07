@@ -32,7 +32,9 @@ def wilson_interval(
     denom = 1 + z**2 / n
     centre = (p + z**2 / (2 * n)) / denom
     half = z * np.sqrt(p * (1 - p) / n + z**2 / (4 * n**2)) / denom
-    return centre - half, centre + half
+    # At p = 0 or 1 a bound equals p exactly in theory; clamp so float rounding
+    # can never put it on the wrong side (which breaks error bars).
+    return np.minimum(centre - half, p), np.maximum(centre + half, p)
 
 
 def rate_table(

@@ -28,6 +28,8 @@ cv:
 evaluation:
   # Share of discharges the care team can review (README objective 3).
   capacities: [0.1, 0.2]
+  # Patient-level bootstrap resamples for test-set confidence intervals.
+  n_bootstrap: 1000
 
 tuning:
   # Random-search budget per model (settings tried, each on every CV fold).
