@@ -6,7 +6,18 @@ Predicting which diabetic inpatients will be readmitted within 30 days, so a car
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![Licence](https://img.shields.io/badge/licence-MIT-green)
 
-**Status:** In development. Steps 1–6 of 7 complete: the model has been evaluated once on the held-out test set, explained with SHAP and audited for fairness. Step 7 (documentation and review) is next.
+**Status:** Complete as a portfolio project. The model was evaluated once on a held-out test set, explained with SHAP and audited for fairness. It is **not deployed**. Serving and monitoring are the subject of a follow-on project.
+
+## Key results in 30 seconds
+- **Reviewing the 20% highest-risk discharges reaches 39% of readmissions** (95% CI 36–40%), about twice the rate of random selection. On the test set, that is 872 of 2,263 readmissions.
+- **The probabilities are trustworthy.** A predicted 27% means about 28% are readmitted, and calibration holds for every sex, age and race group.
+- **The drivers are clinically plausible:** prior inpatient stays and discharge destination account for 35% of the model's reasoning.
+- **Honest trade-offs:** XGBoost beats logistic regression overall (PR-AUC +0.023, CI +0.014 to +0.033), but not clearly at 20% capacity. The model is weaker for patients aged 80+ (recall 34% vs 39%).
+- **Method:** patient-grouped validation throughout, a leakage trap found and avoided in the EDA, and the test-set protocol committed *before* the test set was scored.
+
+![Share of readmissions reached by reviewing the highest-risk patients](reports/figures/test_gains.png)
+
+Documents: [Model card](docs/MODEL_CARD.md) · [Findings for non-technical readers](reports/findings.md) · [EDA notebook](notebooks/01_eda.ipynb)
 
 ## At a glance
 | | |
@@ -43,20 +54,22 @@ The final cohort is **69,987 patients**, and **11.39%** of encounters are readmi
 ## 4. Architecture
 ```mermaid
 flowchart LR
-    A[UCI archive] -->|download.py<br/>SHA-256 verified| B[data/raw]
-    B -->|clean.py<br/>exclusions, types| C[Clean encounters]
-    C -->|features/build.py| D[Feature table]
-    D -->|models/train.py<br/>grouped CV + tuning| E[Trained pipeline]
-    E -->|evaluate.py| F[Metrics, calibration,<br/>SHAP, fairness]
+    A[UCI archive] -->|data/download.py<br/>SHA-256 verified| B[data/raw]
+    B -->|data/clean.py<br/>exclusions, target| C[Clean encounters]
+    C -->|data/split.py<br/>patient-disjoint| D[Train 80% / Test 20%]
+    D -->|features/build.py<br/>inside the Pipeline| E[Feature matrix]
+    E -->|models/baselines.py<br/>models/tuning.py<br/>grouped CV| F[Chosen model]
+    F -->|models/evaluate.py<br/>test set, once| G[Metrics + calibration]
+    F -->|models/explain.py<br/>models/fairness.py| H[SHAP + fairness audit]
 ```
 
-## 5. Methodology (planned)
-- **Leakage control:** train/test split and all cross-validation grouped by `patient_nbr`. All preprocessing sits inside a scikit-learn `Pipeline` fitted on training folds only.
+## 5. Methodology
+- **Hold-out:** a patient-disjoint, outcome-stratified 20% test set (19,867 encounters, 13,951 patients) was split off **before exploration**. EDA and all model development use the training set only.
+- **Leakage control:** the train/test split and all cross-validation are grouped by `patient_nbr`. All preprocessing sits inside a scikit-learn `Pipeline`, so it is fitted on training folds only.
 - **Exclusions:** encounters ending in death or hospice discharge, where readmission is impossible.
-- **Models:** dummy baseline → logistic regression → random forest → XGBoost, with hyperparameter tuning in grouped cross-validation. The test set is used once.
-- **Metrics:** PR-AUC (primary, because positives are rare), ROC-AUC, Brier score, calibration curve, and precision/recall at capacity thresholds.
-
-- **Hold-out:** a patient-disjoint, target-stratified 20% test set (19,867 encounters, 13,951 patients) was split off **before exploration**. EDA and all model development use the training set only.
+- **Models:** no-skill baseline → one-variable rule → logistic regression → random forest → XGBoost. Hyperparameters were tuned by random search in the same five grouped folds, and every model is compared fold by fold.
+- **Metrics:** PR-AUC (primary, because positives are rare), ROC-AUC, Brier score, calibration curves, and precision/recall at the care team's capacity (top 10% and 20%).
+- **Test set used once:** the evaluation code was committed before the test set was scored, and it refuses to overwrite results.
 
 ## 6. Exploratory analysis
 Full narrative: [notebooks/01_eda.ipynb](notebooks/01_eda.ipynb) (training data only).
@@ -66,7 +79,7 @@ Full narrative: [notebooks/01_eda.ipynb](notebooks/01_eda.ipynb) (training data 
 - **Prior utilisation is the strongest signal.** The 30-day readmission rate rises from 8.6% for patients with no inpatient stay in the previous year to about 37% for those with five or more (Cramér's V ≈ 0.17).
 - **Discharge destination matters.** Patients sent to rehab or other inpatient care are readmitted at roughly 2–3× the rate of those discharged home.
 - **HbA1c testing** is linked to slightly lower readmission (about 10% vs 11.7%). The difference is statistically significant but small (V ≈ 0.02), and it is an association, not evidence of cause.
-- **Sex shows no association** (p ≈ 0.47). Race shows only small differences. The fairness audit will check model error rates by group, not just base rates.
+- **Sex shows no association** (p ≈ 0.47). Race shows only small differences. The fairness audit (section 11) checks the model's performance by group, not just base rates.
 - **Every single-variable association is weak**, so expect modest predictive performance.
 
 **A leakage trap found and avoided:**
@@ -86,7 +99,7 @@ Five patient-grouped, outcome-stratified folds on the 79,473 training encounters
 
 - **"Readmissions reached"** is recall at capacity. If the team reviews the highest-risk 20% of discharges, logistic regression would reach about 38% of the patients who are readmitted, against 20% by chance and 34% for a simple rule based on prior stays.
 - **The full model adds a modest amount over the one-variable rule.** That matches the EDA (every association is weak), and it sets the bar random forest and XGBoost must clear to justify their extra complexity.
-- **The Brier scores are close together** because the outcome is rare, so the Brier score mostly reflects the base rate. Calibration will be checked with reliability curves in step 6.
+- **The Brier scores are close together** because the outcome is rare, so the Brier score mostly reflects the base rate. Calibration is checked with reliability curves in section 9.
 
 ## 8. Tree models (cross-validation, training set only)
 Random forest (15 settings) and XGBoost (25 settings) were tuned by random search for PR-AUC on the same five folds, with no class weighting so the probabilities stay calibratable. Search results are in `reports/metrics/tuning_*.csv` and the chosen settings in `best_params.json`. The comparison below is produced by `make models` into `reports/metrics/model_cv.csv`.
@@ -105,8 +118,8 @@ Random forest (15 settings) and XGBoost (25 settings) were tuned by random searc
 | Random forest | +0.021 | 0.005 | 5 of 5 |
 
 - **XGBoost is the strongest model, and its gain is consistent.** The spread between folds (±0.015) is larger than the gain, but that spread affects every model in the same way. Fold by fold, XGBoost wins every time, by between about 0.02 and 0.03.
-- **In capacity terms, the gain is modest.** Reviewing the top 20% of discharges would reach about 40% of readmissions with XGBoost, against 38% with logistic regression. Whether that justifies a less transparent model is a decision for step 6, after calibration, SHAP and the fairness audit.
-- **These scores are slightly optimistic.** They belong to the best of many settings, chosen on these same folds. The untouched test set will give the unbiased estimate.
+- **In capacity terms, the gain is modest.** Reviewing the top 20% of discharges would reach about 40% of readmissions with XGBoost, against 38% with logistic regression. Whether that justifies a less transparent model is weighed in section 12.
+- **These scores are slightly optimistic.** They belong to the best of many settings, chosen on these same folds. The untouched test set gives the unbiased estimate (section 9).
 
 ## 9. Final evaluation (test set, scored once)
 The protocol was fixed and committed before the test set was scored (commit `f645c3c`). Both models were refitted on the full training set. The test set has 19,867 encounters from 13,951 patients, including 2,263 readmissions. The 95% intervals come from 1,000 patient-level bootstrap resamples, and the difference is paired: both models are scored on the same resamples. Generated by `make evaluate` into `reports/metrics/test_metrics.csv`.
@@ -128,7 +141,7 @@ The protocol was fixed and committed before the test set was scored (commit `f64
 
 ![Calibration](reports/figures/test_calibration.png)
 
-**What this means for the model choice:** XGBoost is the better model on every ranking and probability metric. But logistic regression comes close at the capacity a care team is most likely to have, and it is easier to explain. The SHAP and fairness results in step 6b will decide whether XGBoost's extra complexity is justified.
+**What this means for the model choice:** XGBoost is the better model on every ranking and probability metric. But logistic regression comes close at the capacity a care team is most likely to have, and it is easier to explain. Sections 10–12 weigh whether XGBoost's extra complexity is justified.
 
 ## 10. What drives the predictions (SHAP)
 SHAP values come from XGBoost's built-in TreeSHAP, which is exact for tree models, computed on the test set. One-hot columns are summed back into their original feature, so each feature has one score. For every patient, the values add up to the model's output to within 10⁻⁵, and a test checks this. Generated by `make explain`.
@@ -137,7 +150,7 @@ SHAP values come from XGBoost's built-in TreeSHAP, which is exact for tree model
 
 - **Prior inpatient stays (19%) and discharge destination (17%) do most of the work.** These are the same two signals the EDA found, so the model relies on clinically plausible information rather than artefacts.
 - **The effect of prior stays grows steadily.** Compared with the average patient, no prior stays multiplies the odds of readmission by about 0.8, two stays by 1.5, and five or more by 3.0 (median SHAP values).
-- **Payer is the fourth most important feature (5%).** Insurance type can stand in for income or social disadvantage, so it needs a fairness check of its own. See the next steps.
+- **Payer is the fourth most important feature (5%).** Insurance type can stand in for income or social disadvantage, so it needs a check of its own (section 14).
 - **SHAP shows what the model uses, not what causes readmission.** For example, a large number of prior stays is a marker of risk, not a cause that an intervention can remove.
 
 ![SHAP dependence: prior inpatient stays](reports/figures/shap_prior_inpatient.png)
@@ -178,16 +191,27 @@ Conditions:
 2. **Run a sensitivity analysis without payer** in cross-validation (never on the test set), and drop it if accuracy holds.
 3. **Use the score to prioritise, not to exclude.** At 20% capacity, about 61% of readmissions are still not flagged, so clinical judgement and referrals must stay in the process.
 
-_A model card, limitations and the final review follow in step 7._
+## 13. Limitations
+- **Different time and place:** the data comes from US hospitals between 1999 and 2008, coded in ICD-9. NHS care pathways, coding (ICD-10 and SNOMED CT) and populations differ, so performance in a UK setting is unknown without local validation.
+- **Modest discrimination (ROC-AUC 0.67):** this is typical for readmission models built on administrative data, which lack social, functional and post-discharge information.
+- **No temporal validation:** the dataset has no dates, so the split is by patient, not by time. Drift over time is untested.
+- **Labels probably undercount readmissions:** readmissions to hospitals outside the network are probably not recorded.
+- **Small groups:** groups with fewer than 50 readmissions (Asian, Hispanic, Other) cannot be audited reliably.
+- **Risk is not benefit:** the model finds who is likely to return, not who would benefit most from an intervention.
+- **A single random seed and one hold-out:** the patient bootstrap captures sampling uncertainty in the test set, but not variation from re-splitting or re-tuning.
+
+## 14. Next steps
+1. **Payer sensitivity analysis:** retrain without `payer_code` in grouped cross-validation (never on the test set) and drop it if PR-AUC holds.
+2. **Production version (follow-on project):** serve the model behind a FastAPI endpoint with MLflow tracking, CI/CD, and drift and fairness monitoring as specified in the [model card](docs/MODEL_CARD.md#monitoring-if-deployed).
+3. **Decision analysis:** compare intervention costs against avoided readmissions across capacities (net benefit / decision curves) to choose the operating point with the care team.
+4. **Targeting benefit:** with intervention data, estimate who benefits most (uplift modelling) rather than who is at highest risk.
 
 ## Run it yourself
 ```bash
 git clone https://github.com/MulengaSnr/readmission-risk-model.git
 cd readmission-risk-model
 uv sync                                            # Python 3.12 + dependencies
-uv run python -m readmission_risk.data.download    # fetch + verify the dataset
-uv run python -m readmission_risk.data.clean       # exclusions, target, types -> data/processed
-uv run python -m readmission_risk.data.split       # patient-disjoint train/test
+make data                                          # download (SHA-256 verified), clean, split
 make eda                                           # re-run the EDA notebook + figures
 make baselines                                     # grouped CV of the baseline models
 make models                                        # tune RF + XGBoost and compare (~45 min)
@@ -199,13 +223,14 @@ make check                                         # lint + tests
 
 ## Project structure
 ```
-├── configs/default.yaml     dataset URL, checksum, seed, paths
+├── configs/default.yaml     dataset URL, checksum, seed, CV and evaluation settings
 ├── data/                    raw/processed (gitignored) + provenance README
-├── docs/                    model card, checklist, standards
-├── notebooks/               narrative analysis
-├── reports/                 findings + figures
+├── docs/                    model card, project checklist, standards
+├── models/                  fitted pipelines + versions (gitignored, created by make evaluate)
+├── notebooks/               EDA narrative (training data only)
+├── reports/                 findings.md, figures/, metrics/ (all generated numbers)
 ├── src/readmission_risk/    data · features · models · visualisation
-└── tests/
+└── tests/                   unit + integration tests (pytest, run in CI)
 ```
 
 ## Progress
@@ -215,7 +240,7 @@ make check                                         # lint + tests
 - [x] 4. Feature engineering
 - [x] 5. Modelling and grouped cross-validation
 - [x] 6. Evaluation, calibration, SHAP and fairness
-- [ ] 7. Documentation and review
+- [x] 7. Documentation and review
 
 ## Author
 **Enock Mulenga**, Data Scientist · [LinkedIn](https://www.linkedin.com/in/enock-mulenga-8472ba137) · [Portfolio](https://mulengasnr.github.io)

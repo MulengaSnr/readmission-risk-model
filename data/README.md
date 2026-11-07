@@ -31,14 +31,14 @@ Inpatient encounters from 130 US hospitals and integrated delivery networks, 199
 
 Each row is one **encounter**. `patient_nbr` identifies the patient, and one patient can have several encounters. That is why train/test splits in this project are **grouped by patient**.
 
-Known data issues (to be handled in cleaning):
+Known data issues (all handled in `src/readmission_risk/data/clean.py`):
 - Missing values are coded as `?`. `weight`, `payer_code` and `medical_specialty` are largely missing.
 - `IDS_mapping.csv` contains three lookup tables stacked in one file, separated by blank rows.
 - Some discharge dispositions (expired, hospice) mean readmission is impossible, so those encounters are excluded.
 
 ## Data protection
 - The data is public, de-identified and published for research under CC BY 4.0. It contains **no names, dates or addresses**. Patient and encounter IDs are surrogate keys.
-- It still includes sensitive attributes (age band, sex, race) and health data, which would be **special-category data** under UK GDPR Article 9 if it related to identifiable people. The project treats these attributes carefully: they are used for fairness auditing, and whether race should be a model input is evaluated explicitly.
+- It still includes sensitive attributes (age band, sex, race) and health data, which would be **special-category data** under UK GDPR Article 9 if it related to identifiable people. The project treats these attributes carefully. Race is excluded from the model inputs and used only for the fairness audit. Age band and sex are model inputs and are also audited.
 - No re-identification is attempted, and no real patient, employer or client data is used anywhere in this project.
 
 ## Folders
