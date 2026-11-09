@@ -10,7 +10,7 @@ Predicting which diabetic inpatients will be readmitted within 30 days, so a car
 
 ## Key results in 30 seconds
 - **Reviewing the 20% highest-risk discharges reaches 39% of readmissions** (95% CI 36–40%), about twice the rate of random selection. On the test set, that is 872 of 2,263 readmissions.
-- **The probabilities are trustworthy.** A predicted 27% means about 28% are readmitted, and calibration holds for every sex, age and race group.
+- **The probabilities are well calibrated on the test set.** A predicted 27% means about 28% are readmitted, and this holds for every sex and age group and for the two race groups large enough to audit.
 - **The drivers are clinically plausible:** prior inpatient stays and discharge destination account for 35% of the model's reasoning.
 - **Honest trade-offs:** XGBoost beats logistic regression overall (PR-AUC +0.023, CI +0.014 to +0.033), but not clearly at 20% capacity. The model is weaker for patients aged 80+ (recall 34% vs 39%).
 - **Method:** patient-grouped validation throughout, a leakage trap found and avoided in the EDA, and the test-set protocol committed *before* the test set was scored.
@@ -177,14 +177,14 @@ The audit uses one operating policy: flag the top 20% of test encounters by pred
 
 \* Fewer than 50 readmissions in the test set: reported for transparency, but too small to support conclusions. Percentile bootstrap intervals are also unreliable at these sizes.
 
-- **Calibration holds in every group.** The mean predicted risk is within 1 percentage point of the observed rate everywhere, so a given score means the same risk regardless of sex, age or race.
+- **Calibration holds in every group large enough to judge.** The mean predicted risk is within 1 percentage point of the observed rate for every sex and age group, and for Caucasian and African American patients. The four smaller groups also show gaps under 1 point, but their intervals are about ±2 to ±5 points, too wide to support a conclusion.
 - **No meaningful gap by sex, or between African American and Caucasian patients.** Recall differs by 1–2 points, and the intervals are centred near zero.
 - **The oldest patients are the main concern.** Patients aged 80+ have the lowest recall of the adequately sized groups (34% vs 39%), and the model ranks them least well (ROC-AUC 0.628). The interval for the gap just includes zero. Logistic regression shows a smaller gap (−2.4 pts, −8.2 to +3.5), so XGBoost's extra accuracy is not evenly shared.
 - **Patients with missing race are flagged half as often** (9.3% vs 20%). With 37 readmissions, recall cannot be estimated precisely (24%, 10–40%). Missing demographics may go with thinner records, so this group should be monitored.
 - **Small groups (Other, Asian, Hispanic):** this test set cannot answer the question. That is a limitation of the data, not evidence that the model is fair or unfair for them.
 
 ## 12. Model choice and recommendations
-**Recommendation: use XGBoost, with conditions.** It is better than logistic regression on every overall metric (PR-AUC +0.023, 95% CI +0.014 to +0.033) and well calibrated in every group. SHAP gives a reason for each individual prediction, which closes much of the transparency gap. Logistic regression remains a credible, simpler fallback, because the two models are not distinguishable at 20% capacity.
+**Recommendation: use XGBoost, with conditions.** It is better than logistic regression on every overall metric (PR-AUC +0.023, 95% CI +0.014 to +0.033) and well calibrated in every group large enough to audit. SHAP gives a reason for each individual prediction, which closes much of the transparency gap. Logistic regression remains a credible, simpler fallback, because the two models are not distinguishable at 20% capacity.
 
 Conditions:
 1. **Monitor recall for patients aged 80+** and for patients with missing race. Consider a top-up rule or separate review for the oldest patients if the gap persists in live data.
@@ -210,7 +210,7 @@ Payer can stand in for income, so the tuned XGBoost was refitted without `payer_
 - **Modest discrimination (ROC-AUC 0.67):** this is typical for readmission models built on administrative data, which lack social, functional and post-discharge information.
 - **No temporal validation:** the dataset has no dates, so the split is by patient, not by time. Drift over time is untested.
 - **Labels probably undercount readmissions:** readmissions to hospitals outside the network are probably not recorded.
-- **Small groups:** groups with fewer than 50 readmissions (Asian, Hispanic, Other) cannot be audited reliably.
+- **Small groups:** groups with fewer than 50 readmissions (Asian, Hispanic, Other, Unknown) cannot be audited reliably.
 - **Risk is not benefit:** the model finds who is likely to return, not who would benefit most from an intervention.
 - **A single random seed and one hold-out:** the patient bootstrap captures sampling uncertainty in the test set, but not variation from re-splitting or re-tuning.
 
