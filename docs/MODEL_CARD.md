@@ -54,7 +54,7 @@ Policy: flag the top 20% with one cut-off for everyone. Recall is the share of e
 | Caucasian (ref.) / African American | 1,731 / 407 | 38.9% / 40.0% | +1.1 pts (−5.1 to +7.9) | ≤ 0.6 pts |
 | Race unknown | 37 | 24.3% | −14.6 pts (−28.6 to +0.8) | +0.8 pts |
 
-- Calibration holds in every group: a score means the same risk regardless of sex, age or race.
+- Calibration holds in every group large enough to judge: every sex and age group, and Caucasian and African American patients. The four race groups with fewer than 50 readmissions are too small to support a conclusion.
 - **Main concern: patients aged 80+.** They have the lowest recall among the adequately sized groups and the weakest ranking (ROC-AUC 0.628). Logistic regression's gap is smaller (−2.4 pts).
 - Patients with missing race are flagged 9.3% of the time, against 20% overall.
 - The Asian, Hispanic and Other groups each have fewer than 50 readmissions. The test set cannot assess fairness for them.
